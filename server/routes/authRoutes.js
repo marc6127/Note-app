@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const passport = require('passport');
-const { register, login, registerAdmin, refreshToken, logout } = require('../controllers/authController');
+const { register, login, registerAdmin, refreshToken, logout, googleCallback } = require('../controllers/authController');
 
 // Inscription
 router.post('/register', register);
@@ -18,4 +18,12 @@ router.post('/refresh-token', passport.authenticate('jwt', { session: false }), 
 // Logout
 router.post('/logout', passport.authenticate('jwt', { session: false }), logout);
 
-module.exports = router; 
+// Connexion Google
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+router.get('/google/callback',
+  passport.authenticate('google', { session: false, failureRedirect: '/login' }),
+  googleCallback
+);
+
+module.exports = router;

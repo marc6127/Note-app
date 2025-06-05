@@ -1,14 +1,15 @@
+const dotenv = require('dotenv');
+// Charger les variables d'environnement AVANT tout le reste
+dotenv.config({ path: __dirname + '/.env' });
+
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const connectDB = require('./config/db');
-const siteRoutes = require('./routes/siteRoutes');
-const authRoutes = require('./routes/authRoutes');
 const passport = require('passport');
 require('./config/passport')(passport);
+const siteRoutes = require('./routes/siteRoutes');
+const authRoutes = require('./routes/authRoutes');
 
-// Charger les variables d'environnement
-dotenv.config();
 
 // Connexion à MongoDB
 connectDB();

@@ -10,6 +10,7 @@ const {
   addSite,
   getSiteDetails,
   addReview,
+  getReviews,
   getDashboard,
   getSitesByTheme,
   getSitesByDeveloper,
@@ -17,7 +18,11 @@ const {
   getTopDevelopers,
   updateSite,
   updateReview,
-  deleteSite
+  deleteSite,
+  getStats,
+  getSitesCountByDeveloper,
+  getSitesCountByTheme,
+  getSitesWithStats
 } = require('../controllers/reviewController');
 
 // Liste des sites
@@ -25,6 +30,14 @@ router.get('/sites', getSites);
 
 // Détails d'un site + avis
 router.get('/sites/:id', getSiteDetails);
+
+//Récuprer les avis des sites
+router.get('/reviews', getReviews);
+
+router.get('/stats', getStats);
+
+router.get('/stats/sites-by-developer', getSitesCountByDeveloper);
+router.get('/stats/sites-by-theme', getSitesCountByTheme);
 
 // Ajouter une note/avis à un site
 router.post('/sites/:id/reviews', passport.authenticate('jwt', { session: false }), isUser, addReview);
@@ -49,5 +62,8 @@ router.get('/dashboard', passport.authenticate('jwt', { session: false }), isAdm
 router.post('/sites', passport.authenticate('jwt', { session: false }), isAdmin, addSite);
 router.put('/sites/:id', passport.authenticate('jwt', { session: false }), isAdmin, updateSite);
 router.delete('/sites/:id', passport.authenticate('jwt', { session: false }), isAdmin, deleteSite);
+
+// Nouelle route pour récupérer les sites avec les statistiques
+router.get('/sites-with-stats', getSitesWithStats);
 
 module.exports = router;

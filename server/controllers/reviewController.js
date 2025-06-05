@@ -69,6 +69,16 @@ exports.addReview = async (req, res) => {
   }
 };
 
+// Récupérer tous les avis du plus noté au moins noté
+exports.getReviews = async (req, res) => {
+  try {
+    const reviews = await Review.find().sort({ rating: -1, createdAt: -1 });
+    res.json(reviews);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Dashboard : moyenne des notes par site
 exports.getDashboard = async (req, res) => {
   try {
@@ -99,6 +109,80 @@ exports.getDashboard = async (req, res) => {
         }
       },
       { $sort: { averageRating: -1 } }
+    ]);
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+//Statistiques du site
+exports.getStats = async (req, res) => {
+  try {
+    // Nombre total de sites notés (ayant au moins un avis)
+    const sitesNoted = await Review.distinct('site');
+    const totalSitesNoted = sitesNoted.length;
+
+    // Nombre d'utilisateurs actifs (ayant posté au moins un avis)
+    const activeUsers = await Review.distinct('author');
+    const totalActiveUsers = activeUsers.length;
+
+    // Nombre total d'avis donnés
+    const totalReviews = await Review.countDocuments();
+
+    res.json({
+      totalSitesNoted,
+      totalActiveUsers,
+      totalReviews
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Nombre de sites par développeur
+exports.getSitesCountByDeveloper = async (req, res) => {
+  try {
+    const stats = await Site.aggregate([
+      {
+        $group: {
+          _id: '$developer',
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          developer: '$_id',
+          count: 1
+        }
+      },
+      { $sort: { count: -1 } }
+    ]);
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Nombre de sites par thématique
+exports.getSitesCountByTheme = async (req, res) => {
+  try {
+    const stats = await Site.aggregate([
+      {
+        $group: {
+          _id: '$theme',
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          theme: '$_id',
+          count: 1
+        }
+      },
+      { $sort: { count: -1 } }
     ]);
     res.json(stats);
   } catch (error) {
@@ -234,5 +318,55 @@ exports.updateReview = async (req, res) => {
     res.json(review);
   } catch (error) {
     res.status(400).json({ message: error.message });
+  }
+};
+
+// Récupérer les sites avec statistiques (moyenne des notes et nombre d'avis)
+exports.getSitesWithStats = async (req, res) => {
+  try {
+    // Récupère le paramètre de tri depuis la query string (?sort=rating|reviews|alpha)
+    const sort = req.query.sort || 'rating';
+    let sortOption = {};
+
+    if (sort === 'rating') {
+      sortOption = { rating: -1 };
+    } else if (sort === 'reviews') {
+      sortOption = { reviewCount: -1 };
+    } else if (sort === 'alpha') {
+      sortOption = { name: 1 };
+    }
+
+    const stats = await Site.aggregate([
+      {
+        $lookup: {
+          from: 'reviews',
+          localField: '_id',
+          foreignField: 'site',
+          as: 'reviews'
+        }
+      },
+      {
+        $addFields: {
+          rating: { $avg: '$reviews.rating' },
+          reviewCount: { $size: '$reviews' }
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          link: 1,
+          description: 1,
+          theme: 1,
+          developer: 1,
+          rating: { $ifNull: ['$rating', 0] },
+          reviewCount: 1
+        }
+      },
+      { $sort: sortOption }
+    ]);
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };

@@ -2,10 +2,13 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
+  googleId: {
+    type: String,
+    trim: true
+  },
   username: {
     type: String,
     required: true,
-    unique: true,
     trim: true
   },
   email: {

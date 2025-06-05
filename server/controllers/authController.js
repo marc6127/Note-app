@@ -24,7 +24,8 @@ exports.register = async (req, res) => {
     res.status(201).json({
       accessToken,
       refreshToken: refreshTokenDoc.token,
-      user: { id: user._id, username: user.username, email: user.email, role: user.role }
+      user: { id: user._id, username: user.username, email: user.email, role: user.role },
+      message: 'Inscription réussie'
     });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -106,4 +107,36 @@ exports.logout = async (req, res) => {
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
-}; 
+};
+
+// Google Callback
+exports.googleCallback = async (req, res) => {
+  try {
+    const jwt = require('jsonwebtoken');
+    const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
+    const RefreshToken = require('../models/RefreshToken');
+    const crypto = require('crypto');
+
+    const user = req.user;
+    const accessToken = jwt.sign(
+      { id: user._id, username: user.username, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    // Générer un refresh token
+    const token = crypto.randomBytes(40).toString('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 jours
+    const refreshTokenDoc = new RefreshToken({ user: user._id, token, expiresAt });
+    await refreshTokenDoc.save();
+
+    res.json({
+      accessToken,
+      refreshToken: refreshTokenDoc.token,
+      user: { id: user._id, username: user.username, email: user.email, role: user.role },
+      message: 'Connexion Google réussie'
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
