@@ -130,12 +130,8 @@ exports.googleCallback = async (req, res) => {
     const refreshTokenDoc = new RefreshToken({ user: user._id, token, expiresAt });
     await refreshTokenDoc.save();
 
-    res.json({
-      accessToken,
-      refreshToken: refreshTokenDoc.token,
-      user: { id: user._id, username: user.username, email: user.email, role: user.role },
-      message: 'Connexion Google réussie'
-    });
+    const redirectUrl = `http://localhost:8080/login/google/callback?accessToken=${accessToken}&refreshToken=${refreshTokenDoc.token}`;
+    res.redirect(redirectUrl);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

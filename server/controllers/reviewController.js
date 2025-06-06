@@ -47,8 +47,22 @@ exports.getSiteDetails = async (req, res) => {
   try {
     const site = await Site.findById(req.params.id);
     if (!site) return res.status(404).json({ message: 'Site not found' });
+
+    // Récupérer tous les avis du site
     const reviews = await Review.find({ site: site._id }).sort({ createdAt: -1 });
-    res.json({ site, reviews });
+
+    // Calculer la moyenne et le nombre d'avis
+    const reviewCount = reviews.length;
+    const rating = reviewCount > 0
+      ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount)
+      : 0;
+
+    // Ajouter les champs à l'objet site (sans le modifier en base)
+    const siteObj = site.toObject();
+    siteObj.rating = rating;
+    siteObj.reviewCount = reviewCount;
+
+    res.json({ site: siteObj, reviews });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -130,10 +144,17 @@ exports.getStats = async (req, res) => {
     // Nombre total d'avis donnés
     const totalReviews = await Review.countDocuments();
 
+    // Note moyenne globale
+    const avgResult = await Review.aggregate([
+      { $group: { _id: null, averageRating: { $avg: '$rating' } } }
+    ]);
+    const averageRating = avgResult.length > 0 ? avgResult[0].averageRating : 0;
+
     res.json({
       totalSitesNoted,
       totalActiveUsers,
-      totalReviews
+      totalReviews,
+      averageRating
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -145,19 +166,29 @@ exports.getSitesCountByDeveloper = async (req, res) => {
   try {
     const stats = await Site.aggregate([
       {
+        $lookup: {
+          from: 'reviews',
+          localField: '_id',
+          foreignField: 'site',
+          as: 'reviews'
+        }
+      },
+      {
         $group: {
           _id: '$developer',
-          count: { $sum: 1 }
+          count: { $sum: 1 },
+          avgRating: { $avg: { $avg: '$reviews.rating' } }
         }
       },
       {
         $project: {
           _id: 0,
           developer: '$_id',
-          count: 1
+          count: 1,
+          avgRating: { $ifNull: ['$avgRating', 0] }
         }
       },
-      { $sort: { count: -1 } }
+      { $sort: { avgRating: -1 } }
     ]);
     res.json(stats);
   } catch (error) {
@@ -170,19 +201,29 @@ exports.getSitesCountByTheme = async (req, res) => {
   try {
     const stats = await Site.aggregate([
       {
+        $lookup: {
+          from: 'reviews',
+          localField: '_id',
+          foreignField: 'site',
+          as: 'reviews'
+        }
+      },
+      {
         $group: {
           _id: '$theme',
-          count: { $sum: 1 }
+          count: { $sum: 1 },
+          avgRating: { $avg: { $avg: '$reviews.rating' } }
         }
       },
       {
         $project: {
           _id: 0,
           theme: '$_id',
-          count: 1
+          count: 1,
+          avgRating: { $ifNull: ['$avgRating', 0] }
         }
       },
-      { $sort: { count: -1 } }
+      { $sort: { avgRating: -1 } }
     ]);
     res.json(stats);
   } catch (error) {

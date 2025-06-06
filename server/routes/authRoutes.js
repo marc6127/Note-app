@@ -13,7 +13,7 @@ router.post('/login', login);
 router.post('/register-admin', registerAdmin);
 
 // Refresh token
-router.post('/refresh-token', passport.authenticate('jwt', { session: false }), refreshToken);
+router.post('/refresh-token', refreshToken);
 
 // Logout
 router.post('/logout', passport.authenticate('jwt', { session: false }), logout);
