@@ -422,27 +422,7 @@ exports.getHighRatingEmails = async (req, res) => {
     // Récupérer les utilisateurs correspondants
     const users = await User.find({ username: { $in: reviews } });
 
-    // Si l'admin veut télécharger un fichier Excel
-    if (req.query.format === 'excel') {
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('Emails');
-      worksheet.addRow(['Nom', 'Email', 'Date d\'enregistrement']);
-      users.forEach(user => {
-        worksheet.addRow([
-          user.username,
-          user.email,
-          user.createdAt ? user.createdAt.toISOString().split('T')[0] : ''
-        ]);
-      });
-
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', 'attachment; filename=emails.xlsx');
-      await workbook.xlsx.write(res);
-      res.end();
-      return;
-    }
-
-    // Sinon, renvoyer la liste brute (pour Google Sheet ou affichage)
+    // Retourner la liste brute (pour traitement côté front-end)
     res.json({
       users: users.map(user => ({
         username: user.username,
