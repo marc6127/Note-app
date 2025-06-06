@@ -1,5 +1,7 @@
 const Site = require('../models/Site');
 const Review = require('../models/Review');
+const User = require('../models/User');
+const ExcelJS = require('exceljs'); // npm install exceljs
 
 // Liste tous les sites
 exports.getSites = async (req, res) => {
@@ -407,6 +409,47 @@ exports.getSitesWithStats = async (req, res) => {
       { $sort: sortOption }
     ]);
     res.json(stats);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Récupérer les emails des utilisateurs ayant donné des avis >= 4.2
+exports.getHighRatingEmails = async (req, res) => {
+  try {
+    // Trouver les auteurs d'avis >= 4.2
+    const reviews = await Review.find({ rating: { $gte: 4.2 } }).distinct('author');
+    // Récupérer les utilisateurs correspondants
+    const users = await User.find({ username: { $in: reviews } });
+
+    // Si l'admin veut télécharger un fichier Excel
+    if (req.query.format === 'excel') {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Emails');
+      worksheet.addRow(['Nom', 'Email', 'Date d\'enregistrement']);
+      users.forEach(user => {
+        worksheet.addRow([
+          user.username,
+          user.email,
+          user.createdAt ? user.createdAt.toISOString().split('T')[0] : ''
+        ]);
+      });
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=emails.xlsx');
+      await workbook.xlsx.write(res);
+      res.end();
+      return;
+    }
+
+    // Sinon, renvoyer la liste brute (pour Google Sheet ou affichage)
+    res.json({
+      users: users.map(user => ({
+        username: user.username,
+        email: user.email,
+        createdAt: user.createdAt
+      }))
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

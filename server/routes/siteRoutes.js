@@ -22,7 +22,8 @@ const {
   getStats,
   getSitesCountByDeveloper,
   getSitesCountByTheme,
-  getSitesWithStats
+  getSitesWithStats,
+  getHighRatingEmails
 } = require('../controllers/reviewController');
 
 // Liste des sites
@@ -65,5 +66,8 @@ router.delete('/sites/:id', passport.authenticate('jwt', { session: false }), is
 
 // Nouelle route pour récupérer les sites avec les statistiques
 router.get('/sites-with-stats', getSitesWithStats);
+
+// Route pour récupérer les emails des utilisateurs ayant laissé des avis avec une note élevée
+router.get('/admin/high-rating-emails', passport.authenticate('jwt', { session: false }), isAdmin, getHighRatingEmails);
 
 module.exports = router;
